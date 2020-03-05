@@ -304,6 +304,18 @@ class RangeSlider extends Component {
 				size: 0,
 				aggs: (props.histogramQuery || this.histogramQuery)(props),
 			};
+
+			if (props.nestedField) {
+				queryOptions.aggs = {
+					inner: {
+						aggs: queryOptions.aggs,
+						nested: {
+							path: props.nestedField,
+						},
+					},
+				};
+			}
+
 			const value = [props.range.start, props.range.end];
 			const query = customQuery || RangeSlider.defaultQuery;
 
@@ -443,15 +455,21 @@ RangeSlider.defaultProps = {
 	includeNullValues: false,
 };
 
-const mapStateToProps = (state, props) => ({
-	options: state.aggregations[props.componentId]
-		? state.aggregations[props.componentId][props.dataField]
-		  && state.aggregations[props.componentId][props.dataField].buckets // eslint-disable-line
-		: [],
-	selectedValue: state.selectedValues[props.componentId]
-		? state.selectedValues[props.componentId].value
-		: null,
-});
+const mapStateToProps = (state, props) => {
+	const aggregation
+		= props.nestedField && state.aggregations[props.componentId]
+			? state.aggregations[props.componentId].inner
+			: state.aggregations[props.componentId];
+
+	return {
+		options: aggregation
+			? aggregation[props.dataField] && aggregation[props.dataField].buckets // eslint-disable-line
+			: [],
+		selectedValue: state.selectedValues[props.componentId]
+			? state.selectedValues[props.componentId].value
+			: null,
+	};
+};
 
 const mapDispatchtoProps = dispatch => ({
 	setComponentProps: (component, options) => dispatch(setComponentProps(component, options)),
